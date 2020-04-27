@@ -119,7 +119,7 @@ export default {
 						cumulativeTime += road.kesto;
 					}
 
-					let obj = {
+					let wayPoint = {
 						node: l,
 						line: routeLines[l],
 						displayColor: this.lineColors[routeLines[l]],
@@ -130,21 +130,21 @@ export default {
 					if (i < route.route.length) {
 						let nextRouteLine = routeLines[route.route[i + 1]];
 						if (nextRouteLine && routeLines[l] != nextRouteLine) {
-							obj.type = "switch";
-							obj.line = nextRouteLine;
-							obj.displayColor = this.lineColors[nextRouteLine];
+							wayPoint.type = "switch";
+							wayPoint.line = nextRouteLine;
+							wayPoint.displayColor = this.lineColors[nextRouteLine];
 						}
 					}
 
 					if (i == 0) {
-						obj.type = "start";
+						wayPoint.type = "start";
 					} else if (i == route.route.length - 1) {
-						obj.type = "end";
-					} else if (!obj.type) {
-						obj.type = "idle";
+						wayPoint.type = "end";
+					} else if (!wayPoint.type) {
+						wayPoint.type = "idle";
 					}
 					lastNode = l;
-					return obj;
+					return wayPoint;
 				});
 
 				return {
@@ -161,7 +161,7 @@ export default {
 			this.destination = temp;
 		},
 		nodeLines(node) {
-			const lines = this.routesData.lines;
+			const lines = this.routesData.linjastot;
 			return Object.keys(lines).reduce((nodeLines, line) => {
 				if (lines[line].indexOf(node) >= 0) {
 					nodeLines.push(line);
@@ -238,6 +238,8 @@ export default {
 		getRouteLines(route) {
 			let routeLines = {};
 
+			// luodaan lopullinen reittiohje niin, että vaihtoja on mahdollisimman vähän.
+			// eli mennään samalla niin kauan kunnes on pakko vaihtaa
 			route.forEach((n, i) => {
 				if (!routeLines[n]) {
 					let lastIndex = route.length;
