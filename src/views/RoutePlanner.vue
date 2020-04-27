@@ -36,13 +36,10 @@
 						prepend-icon="mdi-map-marker-outline"
 					></v-autocomplete>
 				</v-card-text>
-				<v-card-text
-					class="py-0"
-					v-if="generatedRouteInfo && generatedRouteInfo.finalRoute"
-				>
+				<v-card-text class="py-0" v-if="generatedRouteInfo">
 					<v-timeline align-top dense>
 						<v-timeline-item
-							v-for="l in generatedRouteInfo.finalRoute"
+							v-for="l in generatedRouteInfo"
 							:key="l.node"
 							fill-dot
 							:color="
@@ -53,16 +50,44 @@
 							:small="l.type == 'idle'"
 						>
 							<template v-slot:icon>
-								<span style="color:#000;">{{ l.node }}</span>
+								<span
+									style="color:#000;cursor:pointer;"
+									@click="showStopInfo(l.node)"
+									>{{ l.node }}</span
+								>
 							</template>
 							<div>
 								<strong v-if="l.type == 'start'">
-									Hyppää kyytiin linjalle {{ l.line }} pysäkillä
-									{{ l.node }}
+									Hyppää kyytiin linjalle
+									<v-chip
+										x-small
+										:color="lineColors[l.line]"
+										@click="showLineInfo(l.line)"
+										>{{ l.line }}</v-chip
+									>
+									pysäkillä
+									<v-chip
+										x-small
+										color="primary"
+										@click="showStopInfo(l.node)"
+										>{{ l.node }}</v-chip
+									>
 								</strong>
 								<strong v-if="l.type == 'switch'">
-									Vaihto linjalle {{ l.line }} pysäkillä
-									{{ l.node }}
+									Vaihto linjalle
+									<v-chip
+										x-small
+										:color="lineColors[l.line]"
+										@click="showLineInfo(l.line)"
+										>{{ l.line }}</v-chip
+									>
+									pysäkillä
+									<v-chip
+										x-small
+										color="primary"
+										@click="showStopInfo(l.node)"
+										>{{ l.node }}</v-chip
+									>
 								</strong>
 								<strong v-if="l.type == 'end'">
 									Pois kyydistä pysäkillä {{ l.node }}
@@ -77,6 +102,76 @@
 				</v-card-text>
 			</v-card>
 		</v-col>
+		<v-dialog v-model="viewLineInfoModalOpen" scrollable max-width="300px">
+			<v-card>
+				<v-card-title>Linja {{ viewLineInfo }}</v-card-title>
+				<v-card-subtitle>pysähtyy seuraavilla pysäkeillä</v-card-subtitle>
+				<v-divider></v-divider>
+				<v-card-text style="height: 300px;">
+					<v-list>
+						<v-list-item
+							v-for="stop in routesData.linjastot[viewLineInfo]"
+							:key="stop"
+						>
+							<v-chip
+								small
+								color="primary"
+								@click="showStopInfo(stop)"
+								>{{ stop }}</v-chip
+							>
+							<v-chip
+								x-small
+								v-for="line in nodeLines(stop)"
+								:key="line"
+								:color="lineColors[line]"
+								@click="showLineInfo(line)"
+								class="ml-1"
+								>{{ line }}</v-chip
+							>
+						</v-list-item>
+					</v-list>
+				</v-card-text>
+				<v-divider></v-divider>
+				<v-card-actions>
+					<v-btn
+						color="blue darken-1"
+						text
+						@click="viewLineInfoModalOpen = false"
+					>
+						Sulje
+					</v-btn>
+				</v-card-actions>
+			</v-card>
+		</v-dialog>
+		<v-dialog v-model="viewStopInfoModalOpen" scrollable max-width="300px">
+			<v-card>
+				<v-card-title>Pysäkillä {{ viewStopInfo }}</v-card-title>
+				<v-card-subtitle>pysähtyy seuraavat linjat </v-card-subtitle>
+				<v-divider></v-divider>
+				<v-card-text style="height: 300px;">
+					<v-list>
+						<v-list-item v-for="line in linesForViewedStop" :key="line">
+							<v-chip
+								small
+								:color="lineColors[line]"
+								@click="showLineInfo(line)"
+								>{{ line }}</v-chip
+							>
+						</v-list-item>
+					</v-list>
+				</v-card-text>
+				<v-divider></v-divider>
+				<v-card-actions>
+					<v-btn
+						color="blue darken-1"
+						text
+						@click="viewStopInfoModalOpen = false"
+					>
+						Sulje
+					</v-btn>
+				</v-card-actions>
+			</v-card>
+		</v-dialog>
 	</v-row>
 </template>
 
@@ -94,67 +189,32 @@ export default {
 				punainen: "red",
 				sininen: "blue",
 				vihreä: "green"
-			}
+			},
+			viewLineInfo: null,
+			viewLineInfoModalOpen: false,
+			viewStopInfo: null,
+			viewStopInfoModalOpen: false
 		};
 	},
 	computed: {
 		generatedRouteInfo() {
-			if (this.origin && this.destination) {
-				const route = this.getRoute(this.origin, this.destination);
-				const routeLines = this.getRouteLines(route.route);
-
-				let cumulativeTime = 0;
-				let lastNode = null;
-
-				const finalRoute = route.route.map((l, i) => {
-					let road = this.routesData.tiet
-						.filter(
-							t =>
-								(t.mista == lastNode && t.mihin == l) ||
-								(t.mihin == lastNode && t.mista == l)
-						)
-						.shift();
-
-					if (road) {
-						cumulativeTime += road.kesto;
-					}
-
-					let wayPoint = {
-						node: l,
-						line: routeLines[l],
-						displayColor: this.lineColors[routeLines[l]],
-						road: road,
-						cumulativeTime
-					};
-
-					if (i < route.route.length) {
-						let nextRouteLine = routeLines[route.route[i + 1]];
-						if (nextRouteLine && routeLines[l] != nextRouteLine) {
-							wayPoint.type = "switch";
-							wayPoint.line = nextRouteLine;
-							wayPoint.displayColor = this.lineColors[nextRouteLine];
-						}
-					}
-
-					if (i == 0) {
-						wayPoint.type = "start";
-					} else if (i == route.route.length - 1) {
-						wayPoint.type = "end";
-					} else if (!wayPoint.type) {
-						wayPoint.type = "idle";
-					}
-					lastNode = l;
-					return wayPoint;
-				});
-
-				return {
-					finalRoute
-				};
-			}
-			return null;
+			return this.getRoute(this.origin, this.destination);
+		},
+		linesForViewedStop() {
+			return this.nodeLines(this.viewStopInfo);
 		}
 	},
 	methods: {
+		showLineInfo(line) {
+			this.viewLineInfo = line;
+			this.viewLineInfoModalOpen = true;
+			this.viewStopInfoModalOpen = false;
+		},
+		showStopInfo(stop) {
+			this.viewStopInfo = stop;
+			this.viewStopInfoModalOpen = true;
+			this.viewLineInfoModalOpen = false;
+		},
 		swapOriginAndDestination() {
 			let temp = this.origin;
 			this.origin = this.destination;
@@ -174,7 +234,7 @@ export default {
 				t => t.mista == node || t.mihin == node
 			);
 		},
-		getRoute(from, to) {
+		getFastestRoute(from, to) {
 			// https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
 			let nodesCost = {};
 			let nodesPrevious = {};
@@ -238,7 +298,7 @@ export default {
 		getRouteLines(route) {
 			let routeLines = {};
 
-			// luodaan lopullinen reittiohje niin, että vaihtoja on mahdollisimman vähän.
+			// luodaan lopullinen reitti niin, että vaihtoja on mahdollisimman vähän.
 			// eli mennään samalla niin kauan kunnes on pakko vaihtaa
 			route.forEach((n, i) => {
 				if (!routeLines[n]) {
@@ -269,6 +329,59 @@ export default {
 			});
 
 			return routeLines;
+		},
+		getRoute(origin, destination) {
+			if (origin && destination) {
+				const route = this.getFastestRoute(origin, destination);
+				const routeLines = this.getRouteLines(route.route);
+
+				let cumulativeTime = 0;
+				let lastNode = null;
+
+				const finalRoute = route.route.map((l, i) => {
+					let road = this.routesData.tiet
+						.filter(
+							t =>
+								(t.mista == lastNode && t.mihin == l) ||
+								(t.mihin == lastNode && t.mista == l)
+						)
+						.shift();
+
+					if (road) {
+						cumulativeTime += road.kesto;
+					}
+
+					let wayPoint = {
+						node: l,
+						line: routeLines[l],
+						displayColor: this.lineColors[routeLines[l]],
+						road: road,
+						cumulativeTime
+					};
+
+					if (i < route.route.length) {
+						let nextRouteLine = routeLines[route.route[i + 1]];
+						if (nextRouteLine && routeLines[l] != nextRouteLine) {
+							wayPoint.type = "switch";
+							wayPoint.line = nextRouteLine;
+							wayPoint.displayColor = this.lineColors[nextRouteLine];
+						}
+					}
+
+					if (i == 0) {
+						wayPoint.type = "start";
+					} else if (i == route.route.length - 1) {
+						wayPoint.type = "end";
+					} else if (!wayPoint.type) {
+						wayPoint.type = "idle";
+					}
+					lastNode = l;
+					return wayPoint;
+				});
+
+				return finalRoute;
+			}
+			return null;
 		}
 	}
 };

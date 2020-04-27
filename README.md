@@ -1,4 +1,14 @@
-# koodihaaste
+# koodihaaste 2020
+
+
+## Libraries/frameworks used:
+ - Vue
+ - Vuetify - ui component library
+ - Lodash - helper functions
+
+
+## Demo
+Demo available [here](https://koodihaaste2020.web.app/).
 
 ## Project setup
 ```
@@ -14,11 +24,3 @@ npm run serve
 ```
 npm run build
 ```
-
-### Lints and fixes files
-```
-npm run lint
-```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
