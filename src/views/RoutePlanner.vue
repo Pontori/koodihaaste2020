@@ -90,7 +90,13 @@
 									>
 								</strong>
 								<strong v-if="l.type == 'end'">
-									Pois kyydistä pysäkillä {{ l.node }}
+									Pois kyydistä pysäkillä
+									<v-chip
+										x-small
+										color="primary"
+										@click="showStopInfo(l.node)"
+										>{{ l.node }}</v-chip
+									>
 								</strong>
 								<br v-if="l.type != 'idle'" />
 								<small v-if="l.type != 'start'">
@@ -299,7 +305,7 @@ export default {
 			let routeLines = {};
 
 			// luodaan lopullinen reitti niin, että vaihtoja on mahdollisimman vähän.
-			// eli mennään samalla niin kauan kunnes on pakko vaihtaa
+			// eli mennään samalla bussilla niin kauan kunnes on pakko vaihtaa
 			route.forEach((n, i) => {
 				if (!routeLines[n]) {
 					let lastIndex = route.length;
