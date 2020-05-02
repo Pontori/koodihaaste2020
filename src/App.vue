@@ -2,10 +2,20 @@
 	<v-app>
 		<v-app-bar app color="primary" dark>
 			<div class="d-flex align-center">
-				<v-toolbar-title>Pontsun reittiopas</v-toolbar-title>
+				<router-link to="/" v-slot="{ href, route, navigate }">
+					<v-toolbar-title @click="navigate" style="cursor: pointer;"
+						>Pontsun reittiopas</v-toolbar-title
+					>
+				</router-link>
 			</div>
 
 			<v-spacer></v-spacer>
+
+			<router-link to="/about" v-slot="{ href, route, navigate }"
+				><span @click="navigate" style="cursor: pointer;">
+					?</span
+				></router-link
+			>
 		</v-app-bar>
 
 		<v-content>

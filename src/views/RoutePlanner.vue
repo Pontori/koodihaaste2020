@@ -362,6 +362,7 @@ export default {
 						line: routeLines[l],
 						displayColor: this.lineColors[routeLines[l]],
 						road: road,
+						type: "idle",
 						cumulativeTime
 					};
 
@@ -378,10 +379,10 @@ export default {
 						wayPoint.type = "start";
 					} else if (i == route.route.length - 1) {
 						wayPoint.type = "end";
-					} else if (!wayPoint.type) {
-						wayPoint.type = "idle";
 					}
+
 					lastNode = l;
+
 					return wayPoint;
 				});
 
